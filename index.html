@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍗 Chicken Boat Reviews | Dunkerque</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E55A2B;
+      --glass: rgba(255,255,255,0.1);
+      --glass-border: rgba(255,255,255,0.2);
+      --shadow: 0 25px 45px rgba(0,0,0,0.1);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Poppins', sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    .hero {
+      text-align: center;
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      border: 1px solid var(--glass-border);
+      padding: 3rem 2rem;
+      margin-bottom: 3rem;
+      box-shadow: var(--shadow);
+    }
+    
+    .logo { font-size: 4rem; margin-bottom: 1rem; }
+    .title { font-size: 2.5rem; font-weight: 700; background: linear-gradient(45deg, white, #f8f9ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem; }
+    .rating-display { 
+      font-size: 4rem; 
+      font-weight: 700; 
+      background: linear-gradient(45deg, var(--primary), #FFD700);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .stats { color: white; font-size: 1.2rem; opacity: 0.9; }
+    
+    .glass-card {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border-radius: 25px;
+      border: 1px solid var(--glass-border);
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .glass-card:hover { transform: translateY(-10px); box-shadow: 0 35px 60px rgba(0,0,0,0.15); }
+    
+    .stars { display: flex; gap: 0.5rem; justify-content: center; margin: 2rem 0; }
+    .star { 
+      font-size: 3rem; 
+      cursor: pointer; 
+      transition: all 0.3s ease;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+    .star.filled { 
+      background: linear-gradient(45deg, #FFD700, #FFA500);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .star.empty { color: rgba(255,255,255,0.3); }
+    
+    .form-group { margin-bottom: 2rem; }
+    .form-group label { display: block; color: white; margin-bottom: 0.75rem; font-weight: 500; }
+    textarea {
+      width: 100%;
+      padding: 1.5rem;
+      border: 2px solid var(--glass-border);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      font-family: inherit;
+      font-size: 1.1rem;
+      resize: vertical;
+      min-height: 140px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    textarea::placeholder { color: rgba(255,255,255,0.6); }
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(255,107,53,0.2);
+      background: rgba(255,255,255,0.15);
+    }
+    
+    .btn {
+      background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      padding: 1.25rem 3rem;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(255,107,53,0.4);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn:hover:not(:disabled) { 
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(255,107,53,0.5);
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    
+    .auth-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .auth-btn {
+      padding: 1rem 2rem;
+      border-radius: 50px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+    }
+    .google-btn { background: #fff; color: #333; }
+    .google-btn:hover { background: #f8f9fa; transform: translateY(-2px); }
+    .logout-btn { background: rgba(255,0,0,0.8); color: white; }
+    
+    .review {
+      background: rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 1.5rem 0;
+      border-left: 5px solid var(--primary);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    .review:hover { transform: scale(1.02); }
+    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .review-stars { display: flex; gap: 0.3rem; }
+    .review-date { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
+    .review-author { color: var(--primary); font-weight: 600; }
+    
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      animation: float 20s infinite linear;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+    }
+    
+    @media (max-width: 768px) {
+      .title { font-size: 2rem; }
+      .rating-display { font-size: 3rem; }
+      .glass-card { padding: 2rem 1.5rem; }
+      .stars { gap: 0.3rem; }
+      .star { font-size: 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Particules d'ambiance -->
+  <div class="particles" id="particles"></div>
+  
+  <div class="container" x-data="chickenBoat()" x-init="init()">
+    
+    <!-- Hero -->
+    <div class="hero">
+      <div class="logo">🍗</div>
+      <h1 class="title">Chicken Boat Reviews</h1>
+      <div class="rating-display" x-text="averageRating || '0.0'"></div>
+      <div class="stats" x-text="reviews.length ? `(${reviews.length} avis)` : 'Soyez le premier !'"></div>
+    </div>
+    
+    <!-- Formulaire d'avis (si connecté) -->
+    <div x-show="user" class="glass-card">
+      <h2 style="color: white; font-size: 1.8rem; font-weight: 700; margin-bottom: 2rem; text-align: center;">✨ Laisser votre avis</h2>
+      <form @submit.prevent="submitReview" class="space-y-6">
+        <div class="stars">
+          <template x-for="star in 5" :key="star">
+            <span 
+              class="star" 
+              :class="rating >= star ? 'filled' : 'empty'"
+              @click="rating = star"
+              role="button"
+              tabindex="0"
+              @keydown.enter="rating = star"
+            >⭐</span>
+          </template>
+        </div>
+        <div class="form-group">
+          <label>Votre avis sur Chicken Boat</label>
+          <textarea 
+            v-model="newReview.comment"
+            placeholder="Le poulet était croustillant, les frites parfaites... Dites tout !"
+            maxlength="500"
+          ></textarea>
+        </div>
+        <button type="submit" :disabled="loading" class="btn w-full">
+          <span x-text="loading ? '🚀 Publication...' : '💥 Publier mon avis'"></span>
+        </button>
+      </form>
+    </div>
+    
+    <!-- Connexion -->
+    <div x-show="!user" class="glass-card text-center">
+      <h2 style="color: white; font-size: 1.8rem; margin-bottom: 2rem;">🔐 Connexion requise</h2>
+      <div class="auth-buttons">
+        <button @click="signInGoogle" class="auth-btn google-btn">📱 Google</button>
+        <button @click="signInEmail" class="auth-btn google-btn">✉️ Email</button>
+      </div>
+    </div>
+    
+    <!-- Déconnexion -->
+    <div x-show="user" style="text-align: center; margin: 2rem 0;">
+      <button @click="signOut" class="logout-btn auth-btn">🚪 Déconnexion</button>
+      <p style="color: white; margin-top: 1rem;" x-text="`Connecté: ${user.email}`"></p>
+    </div>
+    
+    <!-- Liste des avis -->
+    <div class="glass-card">
+      <h2 style="color: white; font-size: 1.8rem; font-weight: 700; margin-bottom: 2rem;">📝 Tous les avis Chicken Boat</h2>
+      <template x-for="review in reviews" :key="review.id">
+        <div class="review">
+          <div class="review-header">
+            <div class="review-stars">
+              <template x-for="i in 5" :key="i">
+                <span :class="i <= review.rating ? 'text-yellow-400 filled' : 'text-gray-300 empty'" style="font-size: 1.5rem;">⭐</span>
+              </template>
+            </div>
+            <span class="review-date" x-text="formatDate(review.created_at)"></span>
+          </div>
+          <p style="color: white; line-height: 1.6; margin-bottom: 1rem;" x-text="review.comment"></p>
+          <div class="review-author" x-text="review.user_email"></div>
+        </div>
+      </template>
+      <div x-show="!reviews.length" style="text-align: center; padding: 4rem 2rem; color: rgba(255,255,255,0.6);">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🥚</div>
+        Aucun avis pour le moment. Soyez le premier à tester Chicken Boat !
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function chickenBoat() {
+      return {
+        supabase: null,
+        user: null,
+        reviews: [],
+        newReview: { comment: '' },
+        rating: 5,
+        loading: false,
+        averageRating: '0.0',
+
+        async init() {
+          this.supabase = Supabase.createClient(
+            'YOUR_SUPABASE_URL',  // ← Remplace ici
+            'YOUR_SUPABASE_ANON_KEY'  // ← Remplace ici
+          );
+          
+          await this.loadReviews();
+          await this.checkAuth();
+          
+          // Particules d'ambiance
+          this.createParticles();
+          
+          // Auto-refresh
+          setInterval(() => this.loadReviews(), 30000);
+        },
+
+        async checkAuth() {
+          const {  { user } } = await this.supabase.auth.getUser();
+          this.user = user;
+        },
+
+        async signInGoogle() {
+          await this.supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.href }
+          });
+        },
+
+        async signInEmail() {
+          const email = prompt('Email:');
+          const password = prompt('Mot de passe:');
+          if (email && password) {
+            await this.supabase.auth.signInWithPassword({ email, password });
+          }
+        },
+
+        async signOut() {
+          await this.supabase.auth.signOut();
+          this.user = null;
+          this.newReview.comment = '';
+          this.rating = 5;
+        },
+
+        async submitReview() {
+          if (!this.user || !this.newReview.comment.trim()) return;
+          
+          this.loading = true;
+          const { error } = await this.supabase
+            .from('reviews')
+            .insert({
+              rating: this.rating,
+              comment: this.newReview.comment.trim(),
+              user_id: this.user.id
+            });
+
+          if (!error) {
+            this.newReview.comment = '';
+            this.rating = 5;
+            await this.loadReviews();
+          }
+          this.loading = false;
+        },
+
+        async loadReviews() {
+          const { data } = await this.supabase
+            .from('reviews')
+            .select('*, profiles!inner(email)')
+            .order('created_at', { ascending: false });
+
+          this.reviews = data || [];
+          this.averageRating = this.reviews.length 
+            ? (this.reviews.reduce((sum, r) => sum + r.rating, 0) / this.reviews.length).toFixed(1)
+            : '0.0';
+        },
+
+        formatDate(date) {
+          return new Date(date).toLocaleDateString('fr-FR', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          });
+        },
+
+        createParticles() {
+          const particles = document.getElementById('particles');
+          for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+            particles.appendChild(particle);
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
