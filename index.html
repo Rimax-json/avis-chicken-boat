@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicken Boat Reviews 🍗</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    * { font-family: system-ui, -apple-system, sans-serif; }
+    body { max-width: 800px; margin: 0 auto; padding: 2rem; }
+    .card { background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .stars { display: flex; gap: 0.5rem; }
+    .star { font-size: 2rem; cursor: pointer; transition: color 0.2s; }
+    .star.filled { color: #f59e0b; }
+    .star.empty { color: #d1d5db; }
+    button { background: #f59e0b; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; }
+    button:hover:not(:disabled) { background: #d97706; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    textarea { width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; resize: vertical; min-height: 100px; }
+    .rating-display { font-size: 2.5rem; font-weight: bold; color: #f59e0b; }
+    .review-item { border-left: 5px solid #f59e0b; padding-left: 1.5rem; margin: 1.5rem 0; }
+  </style>
+</head>
+<body>
+  <div x-data="app()" x-init="init()" class="max-w-4xl mx-auto">
+    
+    <!-- Header avec note moyenne -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold mb-4">🍗 Chicken Boat Reviews</h1>
+      <div class="flex items-center justify-center gap-4 mb-8">
+        <span class="rating-display" x-text="averageRating"></span>
+        <span class="text-xl text-gray-600" x-text="`(${reviews.length} avis)`"></span>
+      </div>
+    </div>
+
+    <!-- Formulaire (seulement si connecté) -->
+    <div x-show="user" class="card">
+      <h2 class="text-2xl font-bold mb-6">✍️ Laisser un avis</h2>
+      <form @submit.prevent="submitReview">
+        <div class="stars mb-6">
+          <template x-for="(star, index) in 5" :key="index">
+            <span 
+              class="star" 
+              :class="rating >= (6-index) ? 'filled' : 'empty'"
+              @click="rating = 6-index"
+              role="button"
+              tabindex="0"
+            >⭐</span>
+          </template>
+        </div>
+        <textarea 
+          v-model="newReview.comment" 
+          placeholder="Que pensez-vous de Chicken Boat ?"
+          maxlength="500"
+          x-ref="comment"
+        ></textarea>
+        <button type="submit" :disabled="loading" class="mt-4">
+          <span x-text="loading ? '📤 Publication...' : '🚀 Publier mon avis'"></span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Boutons auth -->
+    <div x-show="!user" class="text-center mb-8">
+      <button @click="signInWithGoogle" class="mr-4">🔗 Google</button>
+      <button @click="signInWithEmail">📧 Email</button>
+    </div>
+
+    <!-- Bouton déconnexion -->
+    <div x-show="user" class="text-center mb-8">
+      <button @click="signOut" class="bg-red-500 hover:bg-red-600">🚪 Déconnexion</button>
+    </div>
+
+    <!-- Liste des avis -->
+    <div class="card">
+      <h2 class="text-2xl font-bold mb-6">📋 Tous les avis</h2>
+      <template x-for="review in reviews" :key="review.id">
+        <div class="review-item">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="flex">
+              <template x-for="i in 5" :key="i">
+                <span :class="i <= review.rating ? 'text-yellow-400' : 'text-gray-300'">⭐</span>
+              </template>
+            </div>
+            <span class="text-sm text-gray-500" x-text="formatDate(review.created_at)"></span>
+          </div>
+          <p x-text="review.comment" class="text-lg mb-2"></p>
+          <small x-text="review.user_email" class="text-gray-600"></small>
+        </div>
+      </template>
+      <div x-show="!reviews.length" class="text-center py-12 text-gray-500">
+        Aucun avis pour le moment. Soyez le premier ! 🎉
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        supabase: null,
+        user: null,
+        reviews: [],
+        newReview: { comment: '' },
+        rating: 5,
+        loading: false,
+        averageRating: '0.0',
+
+        async init() {
+          this.supabase = Supabase.createClient(
+            'YOUR_SUPABASE_URL',
+            'YOUR_SUPABASE_ANON_KEY'
+          )
+          
+          await this.loadReviews()
+          await this.checkUser()
+          
+          // Auto-refresh toutes les 30s
+          setInterval(() => this.loadReviews(), 30000)
+        },
+
+        async checkUser() {
+          const {  { user } } = await this.supabase.auth.getUser()
+          this.user = user
+        },
+
+        async signInWithGoogle() {
+          await this.supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.href }
+          })
+        },
+
+        signInWithEmail() {
+          const email = prompt('Votre email:')
+          const password = prompt('Votre mot de passe:')
+          if (email && password) {
+            this.supabase.auth.signInWithPassword({ email, password })
+          }
+        },
+
+        async signOut() {
+          await this.supabase.auth.signOut()
+          this.user = null
+          this.newReview.comment = ''
+          this.rating = 5
+        },
+
+        async submitReview() {
+          if (!this.user) return
+          
+          this.loading = true
+          const { error } = await this.supabase
+            .from('reviews')
+            .insert({
+              rating: this.rating,
+              comment: this.newReview.comment.trim(),
+              user_id: this.user.id
+            })
+
+          if (!error) {
+            this.newReview.comment = ''
+            this.rating = 5
+            this.loadReviews()
+          }
+          this.loading = false
+        },
+
+        async loadReviews() {
+          const { data } = await this.supabase
+            .from('reviews')
+            .select(`
+              *, 
+              profiles!inner(email)
+            `)
+            .order('created_at', { ascending: false })
+
+          this.reviews = data || []
+          this.averageRating = this.reviews.length 
+            ? (this.reviews.reduce((sum, r) => sum + r.rating, 0) / this.reviews.length).toFixed(1)
+            : '0.0'
+        },
+
+        formatDate(date) {
+          return new Date(date).toLocaleDateString('fr-FR')
+        }
+      }
+    }
+  </script>
+</body>
+</html>
